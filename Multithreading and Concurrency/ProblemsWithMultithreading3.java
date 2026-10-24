@@ -77,6 +77,8 @@ public class ProblemsWithMultithreading3 {
         int a = 0;
         boolean flag = false;
         say when one thread updates the value of a to 1 and sets the flag to true, but due to reordering, the reading thread may see the flag as true before it sees the updated value of a and if 2nd thread checks if flag is true it prints the value of a, it will print 0 instead of 1. This leads to data consistency issue in out application. We can use volatile keyword as well as synchronised to avoid this issue. Volatile ensures that the value of the variable is always read from the main memory, and any changes made by one thread are visible to other threads. Synchronization ensures that only one thread can execute the critical section at a time, which prevents race conditions and ensures that the order of execution is maintained.
+
+        volatile ensures read/write and ordering but not atomicity, synchronised ensures all but it is heavy on performance because of locking and unlocking.
         */
     }
 }
