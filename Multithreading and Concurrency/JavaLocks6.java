@@ -17,9 +17,9 @@ public class JavaLocks6 {
         Thread t1 = new Thread(() -> r1.f1(), "T1");
         Thread t2 = new Thread(() -> r1.f1(), "T2");   
         Thread t3 = new Thread(() -> r1.f1(), "T3");
-        t1.start();
-        t2.start();
-        t3.start();
+        // t1.start();
+        // t2.start();
+        // t3.start();
         //Similarity of Reentrantlock and synchronized is same thread can acquire the lock multiple times, say inside a sync method, we call another sync method, the thread can azquire the lock again. But the difference is synchronized is a block, so when the thread exits the block, it releases the lock. But in Reentrantlock, we have to explicitly call unlock() method to release the lock. If we do not call unlock(), then the thread will hold the lock forever and other threads will be blocked forever. So we should always use try finally block to release the lock. Reentrantlock is also same we can call lock.lock() multiple times, but then we have to call unlock() same number of times to release the lock
 
         //advantage is we have a lock.trylock() method that lets us try to acquire the lock, if we cant we can do other activity in the else block. trylock can be overloaded with a timeout too.see below f2 method.
@@ -30,7 +30,7 @@ public class JavaLocks6 {
                 e.printStackTrace();
             }
         }, "T4");
-        t4.start();
+        // t4.start();
         //it also has other methods like isFair(), isLocked(), isLockedByCurrentThread(), getHoldCount() etc. less used
         //ReentrantLock l1 = new ReentrantLock(true); //this is for fairness. Fairness means the order of threads that requested the lock will be same but it is not guaranteed as it is a hint to the scheduler.
 
@@ -49,12 +49,12 @@ public class JavaLocks6 {
         Thread t8 = new Thread(() -> sr.write(10), "T8");
         Thread t9 = new Thread(() -> sr.write(20), "T9");
         Thread t10 = new Thread(() -> sr.write(15), "T10");
-        t5.start();
-        t6.start();
-        t7.start();
-        t8.start();
-        t9.start();
-        t10.start();
+        // t5.start();
+        // t6.start();
+        // t7.start();
+        // t8.start();
+        // t9.start();
+        // t10.start();
 
         //now we can see that read threads are executing parallelly but write theads will execute one after another. We have another issue with this suppose there are multiple read threads which have occupied the lock on a resource and then a write thread comes but it is not able to occupy the lock since multiple read threads are coming thus it will lead to write starvation of the write thread since  once readlock has acquired the lock, writelock cannot acquire it
 
@@ -71,12 +71,12 @@ public class JavaLocks6 {
         Thread t14 = new Thread(() -> srp.write(10), "T14");
         Thread t15 = new Thread(() -> srp.write(20), "T15");
         Thread t16 = new Thread(() -> srp.write(15), "T16");
-        t11.start();
-        t12.start();
-        t13.start();
-        t14.start();
-        t15.start();
-        t16.start();
+        // t11.start();
+        // t12.start();
+        // t13.start();
+        // t14.start();
+        // t15.start();
+        // t16.start();
         //optimistic reads do not block writers. That's why the three writers can update the value while the optimistic readers are sleeping.
         //also stampedlock is not reentrant means we a thread cannot occupy the lock of a object multiple times, otherwise we will be in Deadlock
 
@@ -84,10 +84,58 @@ public class JavaLocks6 {
         //SEMAPHORE:- It is not a lock but rather a synchronization mechanism where we have a permit count which allows a certain number of threads that can access a critical resource. If we instantianize with new Semaphore(1) it means its a binary mechanism where only one thread can enter at a time but if we increase the numbers, it can allows multiple threads also the exit of this threads are non-deterministic as t1 > t2 > t3 can enter but t3 can exit before t1 or t2.
         Semaphore s1 = new Semaphore(4); //means 4 threads can access 
         Semaphore s2 = new Semaphore(3, true); // this means it will respect fairness
+        //Semaphore have a acquire() method that a thread can use to get the permit and a reease() method in which it can release the permit
         //this is used in API rate limiters and to put limit in parallelly executed task. Diff between between lock and semaphore is there is no ownership by threads in semaphore like they can in locks
+         SharedResourceForSemaphore resource =
+            new SharedResourceForSemaphore();
+
+        Thread t17 = new Thread(
+            () -> {
+                try {
+                    resource.write(10);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }, "T17"
+        );
+
+        Thread t18 = new Thread(
+            () -> {
+                try {
+                    resource.read();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }, "T18"
+        );
+
+        Thread t19 = new Thread(
+            () -> {
+                try {
+                    resource.write(20);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }, "T19"
+        );
+
+        Thread t20 = new Thread(
+            () -> {
+                try {
+                    resource.write(21);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }, "T20"
+        );
+
+        t17.start();
+        t18.start();
+        t19.start();
+        t20.start();
 
 
-        //CONDITION:- 
+        //CONDITION:- It is a
     
     }
 }
@@ -225,5 +273,59 @@ class SharedResourceForStampedLock {
         }
         System.out.println("Thread " + Thread.currentThread().getName() + " is reading value: " + currentValue);
         return currentValue;
+    }
+}
+
+//for Semaphore
+class SharedResourceForSemaphore {
+
+    private int value = 0;
+
+    private final Semaphore s1 = new Semaphore(1,true);
+
+    public void write(int newVal) throws InterruptedException {
+
+        String threadName = Thread.currentThread().getName();
+        System.out.println(
+            "Thread waiting for permit: " + threadName
+        );
+        s1.acquire();
+        try {
+            System.out.println(
+                "Thread acquired permit: " + threadName
+            );
+            this.value = newVal;
+            Thread.sleep(1000);
+        } finally {
+            System.out.println(
+                "Thread releasing permit: " + threadName
+            );
+            s1.release();
+        }
+    }
+
+    public int read() throws InterruptedException {
+
+        String threadName = Thread.currentThread().getName();
+        System.out.println(
+            "Thread waiting for permit: " + threadName
+        );
+        s1.acquire();
+        try {
+            System.out.println(
+                "Thread acquired permit: " + threadName
+            );
+            Thread.sleep(1000);
+            System.out.println(
+                "Thread read value: " + value
+            );
+            return this.value;
+
+        } finally {
+            System.out.println(
+                "Thread releasing permit: " + threadName
+            );
+            s1.release();
+        }
     }
 }
